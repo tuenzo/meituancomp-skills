@@ -16,6 +16,7 @@ COLUMN_ALIASES = {
     "discount_rate": ["discount_rate", "discount", "discount_pct"],
     "view_uv": ["view_uv", "exposure_uv", "impression_uv", "browse_uv"],
     "buy_uv": ["buy_uv", "purchase_uv", "order_uv"],
+    "sku_id": ["sku_id", "sku", "item_id", "goods_id", "product_id"],
 }
 
 
@@ -39,12 +40,28 @@ def load_statsmodels_formula_api():
     return smf
 
 
+def load_statsmodels_api():
+    try:
+        import statsmodels.api as sm
+    except ImportError as exc:
+        raise SystemExit(
+            "statsmodels is required to run this script. Install statsmodels before execution."
+        ) from exc
+    return sm
+
+
 def load_scipy_stats():
     try:
         from scipy import stats
     except ImportError:
         return None
     return stats
+
+
+def parse_csv_list(raw_value: str | None) -> list[str]:
+    if not raw_value:
+        return []
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
 
 
 def read_table(path: str | Path):
@@ -161,3 +178,32 @@ def normalize_numeric_columns(df, columns: Iterable[str]):
         if column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
     return df
+
+
+def choose_available_columns(df, candidates: Iterable[str]) -> list[str]:
+    return [column for column in candidates if column in df.columns]
+
+
+def build_time_folds(df, time_column: str = "month", min_folds: int = 3):
+    pd = load_pandas()
+    if time_column in df.columns:
+        periods = [value for value in sorted(df[time_column].dropna().unique())]
+    else:
+        periods = [value for value in sorted(df["date"].dt.to_period("M").astype(str).dropna().unique())]
+        df = df.copy()
+        df[time_column] = df["date"].dt.to_period("M").astype(str)
+
+    if len(periods) < min_folds:
+        cutoff_index = max(int(len(df) * 0.7), 1)
+        ordered = df.sort_values("date")
+        return [(ordered.index[:cutoff_index], ordered.index[cutoff_index:])]
+
+    folds = []
+    for index in range(1, len(periods)):
+        train_periods = periods[:index]
+        test_period = periods[index]
+        train_index = df.index[df[time_column].isin(train_periods)]
+        test_index = df.index[df[time_column] == test_period]
+        if len(train_index) > 0 and len(test_index) > 0:
+            folds.append((train_index, test_index))
+    return folds

@@ -30,9 +30,13 @@ def load_json(path: str | None):
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate report-ready markdown tables and narrative.")
     parser.add_argument("--descriptive-csv", help="CSV output from run_descriptive_stats.py.")
-    parser.add_argument("--did-json", help="JSON output from run_did_event_study.py.")
+    parser.add_argument("--did-json", help="Legacy DID JSON output.")
+    parser.add_argument("--psm-did-json", help="JSON output from run_psm_did_event_study.py.")
     parser.add_argument("--localgap-json", help="JSON output from run_localgap_model.py.")
     parser.add_argument("--category-csv", help="Category-level decomposition CSV.")
+    parser.add_argument("--gps-json", help="JSON output from run_gps_response.py.")
+    parser.add_argument("--gps-curve-csv", help="CSV dose-response curve from run_gps_response.py.")
+    parser.add_argument("--uplift-csv", help="CSV output from run_uplift_prioritization.py.")
     parser.add_argument("--output", required=True, help="Output markdown path.")
     return parser.parse_args()
 
@@ -53,7 +57,7 @@ def main():
             ]
         )
 
-    did_summary = load_json(args.did_json)
+    did_summary = load_json(args.psm_did_json or args.did_json)
     if did_summary:
         rows = []
         for comparison_name, payload in did_summary.get("comparisons", {}).items():
@@ -69,8 +73,8 @@ def main():
             )
         sections.extend(
             [
-                "## DID or Event-Study Diagnostics",
-                "Treat this section as directional support rather than a definitive causal estimate when treatment intensity is constructed from realized exposure or discount patterns.",
+                "## PSM Plus DID or Event-Study Diagnostics",
+                "Treat this section as directional support rather than as the final increment estimate.",
                 markdown_table(pd.DataFrame(rows)),
             ]
         )
@@ -96,6 +100,36 @@ def main():
                 "## Category Decomposition",
                 "Category labels summarize attribution patterns under the current model and should not be treated as immutable business truths.",
                 markdown_table(category),
+            ]
+        )
+
+    gps_summary = load_json(args.gps_json)
+    if gps_summary:
+        curve = pd.read_csv(args.gps_curve_csv) if args.gps_curve_csv else pd.DataFrame()
+        sections.extend(
+            [
+                "## GPS Dose-Response",
+                "Use this layer to read scaling logic and diminishing returns only within the supported treatment range.",
+                markdown_table(pd.DataFrame([gps_summary])),
+                markdown_table(curve),
+            ]
+        )
+
+    if args.uplift_csv:
+        uplift = pd.read_csv(args.uplift_csv)
+        sections.extend(
+            [
+                "## Uplift Prioritization",
+                "Use uplift as an allocation ranking layer rather than as stand-alone causal proof.",
+                markdown_table(uplift),
+            ]
+        )
+
+        bucket_counts = uplift["action_bucket"].value_counts().to_dict() if "action_bucket" in uplift.columns else {}
+        sections.extend(
+            [
+                "## Recommendation Summary",
+                f"Current action-bucket counts: {bucket_counts}",
             ]
         )
 

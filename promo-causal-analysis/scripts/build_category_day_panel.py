@@ -21,7 +21,9 @@ NUMERIC_EXPOSURE_COLUMNS = ["view_uv"]
 def validate_inputs(orders, exposure, activity_calendar) -> None:
     ensure_columns(orders, ["date", "category_name_cn", "gmv"])
     if exposure is not None:
-        ensure_columns(exposure, ["date", "category_name_cn", "view_uv"])
+        ensure_columns(exposure, ["date", "view_uv"])
+        if "category_name_cn" not in exposure.columns and "sku_id" not in exposure.columns:
+            raise SystemExit("Exposure input must include category_name_cn or sku_id.")
     if activity_calendar is not None:
         ensure_columns(activity_calendar, ["date", "is_activity"])
 
@@ -40,7 +42,18 @@ def aggregate_orders(orders):
     return grouped
 
 
-def aggregate_exposure(exposure):
+def aggregate_exposure(exposure, sku_category_map=None):
+    if "category_name_cn" not in exposure.columns:
+        if sku_category_map is None:
+            raise SystemExit("Exposure input requires category_name_cn or a valid sku-category mapping.")
+        ensure_columns(exposure, ["sku_id"])
+        ensure_columns(sku_category_map, ["sku_id", "category_name_cn"])
+        exposure = exposure.merge(
+            sku_category_map[["sku_id", "category_name_cn"]].drop_duplicates(),
+            on="sku_id",
+            how="left",
+        )
+        exposure = exposure.dropna(subset=["category_name_cn"]).copy()
     exposure = normalize_numeric_columns(exposure, NUMERIC_EXPOSURE_COLUMNS)
     grouped = (
         exposure.groupby(["date", "category_name_cn"], as_index=False)
@@ -64,10 +77,10 @@ def merge_activity_calendar(panel, activity_calendar):
     return merged
 
 
-def build_panel(orders, exposure=None, activity_calendar=None, payday_anchor: int = 27):
+def build_panel(orders, exposure=None, activity_calendar=None, payday_anchor: int = 27, sku_category_map=None):
     order_panel = aggregate_orders(orders)
     if exposure is not None:
-        exposure_panel = aggregate_exposure(exposure)
+        exposure_panel = aggregate_exposure(exposure, sku_category_map=sku_category_map)
         panel = order_panel.merge(exposure_panel, on=["date", "category_name_cn"], how="outer")
     else:
         panel = order_panel.copy()
@@ -90,6 +103,7 @@ def parse_args():
     parser.add_argument("--orders", required=True, help="Path to the raw orders table.")
     parser.add_argument("--exposure", help="Path to the raw exposure table.")
     parser.add_argument("--activity-calendar", help="Path to the activity calendar table.")
+    parser.add_argument("--sku-category-map", help="Optional path to a sku-to-category mapping table for sku-day exposure inputs.")
     parser.add_argument("--output", required=True, help="Output path for the category-day panel.")
     parser.add_argument("--metadata-output", required=True, help="Output path for panel metadata JSON.")
     parser.add_argument("--payday-anchor", type=int, default=27, help="Anchor day used for dist2pay.")
@@ -99,16 +113,24 @@ def parse_args():
 def main():
     args = parse_args()
     orders = standardize_columns(read_table(args.orders), required=["date", "category_name_cn", "gmv"])
-    exposure = standardize_columns(read_table(args.exposure), required=["date", "category_name_cn", "view_uv"]) if args.exposure else None
+    exposure = standardize_columns(read_table(args.exposure), required=["date", "view_uv"]) if args.exposure else None
     activity_calendar = standardize_columns(read_table(args.activity_calendar), required=["date", "is_activity"]) if args.activity_calendar else None
+    sku_category_map = standardize_columns(read_table(args.sku_category_map), required=["sku_id", "category_name_cn"]) if args.sku_category_map else None
 
     validate_inputs(orders, exposure, activity_calendar)
-    panel = build_panel(orders, exposure=exposure, activity_calendar=activity_calendar, payday_anchor=args.payday_anchor)
+    panel = build_panel(
+        orders,
+        exposure=exposure,
+        activity_calendar=activity_calendar,
+        payday_anchor=args.payday_anchor,
+        sku_category_map=sku_category_map,
+    )
     write_table(panel, args.output)
     metadata = summarize_panel(panel)
     metadata["columns"] = list(panel.columns)
     metadata["downgrades"] = {
         "missing_exposure": exposure is None,
+        "sku_mapping_used": sku_category_map is not None,
         "missing_activity_calendar": activity_calendar is None and "is_activity" not in orders.columns,
         "missing_buy_uv": "buy_uv" not in panel.columns,
         "missing_discount_rate": "discount_rate" not in panel.columns,
