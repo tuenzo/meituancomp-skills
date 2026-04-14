@@ -1,4 +1,4 @@
 interface:
-  display_name: "Promo Causal Analysis"
-  short_description: "Analyze cyclical promotion effects with LocalGap"
-  default_prompt: "Use $promo-causal-analysis to run a LocalGap-first promotion analysis under cyclical demand."
+  display_name: "Retail Promotion Evaluation"
+  short_description: "Evaluate cyclical promotion lift and optimization"
+  default_prompt: "Use $promo-causal-analysis to evaluate retail promotion increment under cyclical demand and produce optimization recommendations."

@@ -1,69 +1,89 @@
-# DID and Event-Study
+# PSM + DID / Event Study
 
 ## Role
 
-Use this reference when the user requests a treatment-control style diagnostic in addition to, or instead of, the LocalGap section.
+Use this module for directional causal support when the user wants more than descriptive comparison but the main incremental statement should still come from LocalGap.
 
-Treat DID and event-study as supporting evidence unless a stronger identification claim is explicitly justified.
+Treat this module as auxiliary evidence. Even after matching, it does not replace the LocalGap accounting layer.
+
+## Questions It Answers
+
+- does a higher-intensity group move differently than a comparable lower-intensity group
+- are the directional findings consistent with the business story
+- do pretrend and placebo diagnostics materially weaken the claim
 
 ## Default Parameters
 
-Use these configurable defaults:
-
 | Parameter | Default | Notes |
 | --- | --- | --- |
-| `treatment_quantile` | `0.75` | Top quartile defines the high-intensity group |
-| `clean_control_quantile` | `0.25` | Bottom quartile for cleaner robustness comparison |
-| `grouping_window` | `activity_period_mean` | Build treatment groups from mean intensity over the activity window |
-| `event_window_pre` | `14` | Default lookback for event-study graphics |
-| `event_window_post` | `14` | Default look-forward for event-study graphics |
-| `min_pre_periods` | `3` | Minimum count for pretrend inspection |
+| `treatment_quantile` | `0.75` | Top quartile defines the higher-intensity group |
+| `clean_control_quantile` | `0.25` | Bottom quartile defines the cleaner control |
+| `grouping_window` | `activity_period_mean` | Build treatment intensity from activity-window means |
+| `event_window_pre` | `14` | Default lookback for event-study diagnostics |
+| `event_window_post` | `14` | Default look-forward for event-study diagnostics |
+| `matching_method` | `psm_nearest_neighbor` | One-to-one nearest propensity-score matching by default |
+| `matching_caliper` | `0.1` | Apply when propensity support is thin |
 
 ## Treatment Construction
 
-Support two intensity types:
+Default treatment variables:
 
 - exposure lift
 - discount lift
+- documented combined intensity score when both exposure and discount are present
 
-Define lift relative to a documented historical non-activity reference for the same category. Prefer historical local reference over cross-sectional rank only.
+Define lift relative to a historical non-activity reference for the same category. Prefer local historical reference over cross-sectional rank alone.
 
-Default grouping:
+Default comparisons:
 
-- top 25% versus rest 75%
-- top 25% versus bottom 25% as the cleaner robustness version
+- `top 25% vs rest 75%`
+- `top 25% vs bottom 25%`
 
-Do not switch between grouping definitions without stating it clearly.
+## Matching Logic
 
-## Modeling Notes
+Use pre-treatment or non-activity covariates for matching, such as:
 
-When treatment is defined from realized activity-period intensity, the design is closer to a high-intensity versus low-intensity comparison than to a clean exogenous treatment assignment.
+- baseline GMV
+- baseline exposure
+- baseline discount
+- category size proxies
+- pre-period trend summaries
 
-State that limitation directly in any summary.
+Do not match on post-treatment outcomes.
+
+If the covariate set is too thin for credible matching, disclose the downgrade and treat the resulting DID as weaker evidence.
+
+## Estimation
+
+Recommended sequence:
+
+1. define treatment and control groups
+2. estimate propensity scores
+3. match treated and control categories or slices
+4. run DID on the matched sample
+5. run event-study or pretrend checks
+6. run placebo timing or sensitivity checks when feasible
 
 ## Diagnostics
 
 Always report:
 
 - treatment definition
-- reference period used to construct lift
-- pretrend plot or equivalent coefficient summary
-- whether pretrend evidence is supportive, mixed, or weak
-
-If pretrend fails, keep the section but weaken the claim.
+- matching variables
+- matched sample size
+- balance diagnostics or a clear balance limitation
+- DID coefficient
+- pretrend or event-study result
+- placebo result when available
 
 ## Interpretation
 
 Use these rules:
 
-- supportive pretrends plus stable coefficients can support directional consistency
-- failing pretrends block strong causal wording
-- disagreement between exposure and discount DID should be discussed, not averaged away
+- significant DID with acceptable balance and stable pretrend can support directional consistency
+- weak balance, failing pretrend, or strong placebo blocks strong language
+- disagreement between exposure-based and discount-based DID should be discussed, not averaged away
 
-## Exit Conditions
+## Guardrail
 
-A usable DID section requires:
-
-- documented treatment construction
-- estimable model or event-study coefficients
-- a written caveat on endogeneity risk when relevant
+If treatment is built from realized activity-period intensity, describe the design as matched intensity-group comparison rather than a clean exogenous treatment assignment.

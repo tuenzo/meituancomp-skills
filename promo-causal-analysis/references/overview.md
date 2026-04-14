@@ -2,43 +2,29 @@
 
 ## Problem Framing
 
-Use this skill for promotion-effect analysis when sales are confounded by recurring demand cycles such as payday, month-end, or fixed weekday structure.
+Use this skill for retail promotion evaluation when the business question is not only "did sales rise" but "how much of the rise is incremental after accounting for natural cyclical demand."
 
-In this setting, raw activity-period lift is not a reliable effect estimate because the promotion window can overlap with naturally stronger demand days.
+The key risk is misreading payday, month-end, or weekday-driven demand as promotion increment.
 
-## Why LocalGap First
+## Unified Method Position
 
-Default to a LocalGap-first workflow because it compares each activity-period observation against a local historical non-activity reference rather than against a global average.
+Use the modules in this order of authority:
 
-This makes the baseline more sensitive to recurring calendar structure and usually easier to explain to business users.
+1. `LocalGap` for main incremental accounting
+2. `GPS` for continuous response shape and saturation
+3. `uplift` for allocation priority
+4. `PSM + DID / event study` for auxiliary causal support
+5. `EDA` for business context only
 
-## Role of DID and Event-Study
+## Why Category-Day
 
-Use DID or event-study as supporting diagnostics when the user wants a treatment-control view.
+Default to `category x day` because it balances two needs:
 
-In this skill, DID is not the default final answer because:
-
-- treatment intensity is often constructed from realized exposure or discount lift
-- activity timing may overlap with cyclical demand shocks
-- treatment assignment is rarely cleanly exogenous
-
-Treat the DID section as a directional or robustness layer unless stronger identification is explicitly justified.
-
-## Analysis Objects
-
-Prioritize these objects in order:
-
-1. `LocalGap`
-2. exposure or discount channel decomposition when variables exist
-3. DID or event-study diagnostics when requested
-4. descriptive before-after comparisons as context only
+- enough granularity to preserve operational variation
+- enough stability to support matching, baseline construction, decomposition, and prioritization
 
 ## Scope Boundary
 
-Do not use this skill as a generic forecasting workflow.
+Do not use this skill as a pure forecasting workflow.
 
-Do not use it when:
-
-- the problem is pure demand prediction
-- no reliable activity flag exists
-- the user explicitly asks for a different causal framework and does not want LocalGap
+Do not use it for user-level personalization unless user-level treatment and outcome data are actually available.

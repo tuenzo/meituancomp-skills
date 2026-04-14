@@ -2,50 +2,48 @@
 
 ## Default Structure
 
-Use the sections below when the user asks for full analysis or report-ready output:
+Use this section order for a full business-facing output:
 
 1. Data summary
-2. Descriptive comparison
-3. DID or event-study diagnostics if run
-4. LocalGap main findings
-5. Category decomposition
-6. Caveats and limits
+2. Business-oriented EDA
+3. PSM + DID / event study
+4. LocalGap main increment
+5. GPS dose-response
+6. Uplift prioritization
+7. Recommendation summary
+8. Caveats and limits
 
 ## Section Templates
 
 ### Data Summary
 
-Use this pattern:
+"The analysis uses a category-day panel built from the available source tables. The panel covers [date range], includes [category count] categories, and identifies [activity day count] activity dates. Missing fields and downgraded modules are disclosed before interpretation."
 
-"The analysis uses a category-day panel built from the available source tables. The panel covers [date range], includes [category count] categories, and identifies [activity day count] activity dates. Missing exposure, discount, or conversion fields are disclosed before model interpretation."
+### Business-Oriented EDA
 
-### Descriptive Comparison
+"Activity periods show [higher/lower/similar] GMV than non-activity periods, together with differences in [exposure/discount/conversion]. These contrasts are descriptive only and may still reflect cyclical demand timing."
 
-Use this pattern:
+### PSM + DID / Event Study
 
-"Activity periods show [higher/lower/similar] GMV than non-activity periods, along with differences in [exposure/discount/conversion]. These raw contrasts are descriptive only and may still reflect cyclical demand timing."
+"A matched DID or event-study comparison between higher-intensity and lower-intensity groups provides [supportive/mixed/weak] directional evidence. This layer should be read as auxiliary causal support rather than as the final increment estimate."
 
-### DID or Event-Study
+### LocalGap Main Increment
 
-Use this pattern:
+"Relative to the local historical non-activity baseline, activity-period observations show a LocalGap of [summary]. This is the main incremental accounting layer in the workflow."
 
-"A DID or event-study diagnostic comparing higher-intensity and lower-intensity groups provides [supportive/mixed/weak] directional evidence. Because treatment intensity is constructed from realized exposure or discount patterns, this section should be read as supportive rather than definitive."
+### GPS Dose-Response
 
-### LocalGap Findings
+"The GPS dose-response curve suggests [monotonic growth / diminishing returns / flat response / unstable tail behavior] over the supported treatment range. Interpretation outside supported overlap should be avoided."
 
-Use this pattern:
+### Uplift Prioritization
 
-"Relative to the local historical non-activity baseline, activity-period observations show a LocalGap of [summary]. The estimated channel terms indicate that LocalGap is [more/less] associated with excess exposure, excess discount, and their interaction, subject to baseline quality and data coverage."
+"Uplift scoring suggests that [category group] should be prioritized, while [category group] should be treated selectively or left undisturbed. These recommendations depend on fold stability and should not be interpreted as standalone causal proof."
 
-### Category Decomposition
+### Recommendation Summary
 
-Use this pattern:
-
-"Category-level results suggest three broad patterns: exposure-driven categories, residual-heavy categories, and mixed categories. These labels summarize model attribution patterns rather than immutable business truths."
+"Taken together, the evidence supports [scale / optimize / hold / reduce disturbance] as the primary strategy. The conclusion is anchored on LocalGap, refined by GPS, and prioritized through uplift."
 
 ### Caveats
-
-Use this pattern:
 
 "Results should be interpreted with caution because [main caveat]. In particular, [secondary caveat] limits how strongly the findings can be described as incremental or causal."
 
